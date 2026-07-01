@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4']
+
+    name: PHP ${{ matrix.php }}
+
+    steps:
+      - name: Checkout adapter
+        uses: actions/checkout@v4
+        with:
+          path: bounceshift-laravel
+
+      - name: Checkout core package
+        uses: actions/checkout@v4
+        with:
+          repository: bounceshift/bounceshift-php
+          path: bounceshift-php
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: json
+          coverage: none
+
+      - name: Install dependencies
+        working-directory: bounceshift-laravel
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run tests
+        working-directory: bounceshift-laravel
+        run: vendor/bin/pest

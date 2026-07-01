@@ -1,0 +1,79 @@
+{
+    "name": "bounceshift/laravel",
+    "description": "Laravel adapter for the BounceShift email-validation SDK — facade, config, and a Deliverable validation rule.",
+    "keywords": [
+        "bounceshift",
+        "laravel",
+        "email",
+        "email-validation",
+        "email-verification",
+        "deliverability",
+        "validation-rule",
+        "sdk"
+    ],
+    "homepage": "https://bounceshift.com",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "BounceShift",
+            "homepage": "https://bounceshift.com"
+        }
+    ],
+    "support": {
+        "docs": "https://bounceshift.com/docs/api",
+        "issues": "https://github.com/bounceshift/laravel/issues",
+        "source": "https://github.com/bounceshift/laravel"
+    },
+    "require": {
+        "php": "^8.2",
+        "bounceshift/bounceshift-php": "^1.0",
+        "illuminate/contracts": "^11.0|^12.0|^13.0",
+        "illuminate/support": "^11.0|^12.0|^13.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0|^10.0",
+        "pestphp/pest": "^3.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../bounceshift-php",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "BounceShift\\Laravel\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "BounceShift\\Laravel\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "pest"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "BounceShift\\Laravel\\BounceShiftServiceProvider"
+            ],
+            "aliases": {
+                "BounceShift": "BounceShift\\Laravel\\Facades\\BounceShift"
+            }
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
