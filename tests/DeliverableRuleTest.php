@@ -72,6 +72,30 @@ it('fails a risky address under strict mode', function (): void {
     expect(runRule((new Deliverable)->strict()))->not->toBe([]);
 });
 
+it('passes a high-confidence result above the minConfidence floor', function (): void {
+    app()->instance(Client::class, StubClientFactory::returningStatus('valid', ['confidence' => 95]));
+
+    expect(runRule((new Deliverable)->minConfidence(70)))->toBe([]);
+});
+
+it('fails a low-confidence result below the minConfidence floor', function (): void {
+    app()->instance(Client::class, StubClientFactory::returningStatus('valid', ['confidence' => 40]));
+
+    expect(runRule((new Deliverable)->minConfidence(70)))->not->toBe([]);
+});
+
+it('passes a zero-confidence unknown in the lenient default', function (): void {
+    app()->instance(Client::class, StubClientFactory::returningStatus('unknown', ['confidence' => 0]));
+
+    expect(runRule(new Deliverable))->toBe([]);
+});
+
+it('rejects a zero-confidence unknown only once a confidence floor is set', function (): void {
+    app()->instance(Client::class, StubClientFactory::returningStatus('unknown', ['confidence' => 0]));
+
+    expect(runRule((new Deliverable)->minConfidence(50)))->not->toBe([]);
+});
+
 it('fails open when the client throws', function (): void {
     app()->instance(Client::class, StubClientFactory::throwing(
         new FakeTransportException('network down'),

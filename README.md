@@ -96,15 +96,30 @@ $request->validate([
 
 If the API is unreachable (network/API outage), the rule **fails open** and passes, so an outage never blocks your users.
 
+> [!WARNING]
+> **`strict()` and `minConfidence()` can reject real users.** On infrastructure where the SMTP probe is throttled — common for **Outlook/Hotmail and Gmail** — legitimate, deliverable addresses often come back as `unknown` with low confidence. That is a probe limitation, *not* a quality signal. For public signup forms, prefer the **lenient default**, which never blocks on uncertainty. Only reach for strict mode or a confidence floor when you know your `unknown` rate is low and you would rather lose a few real addresses than accept any risk.
+
 ### Strict mode
 
-`->strict()` additionally rejects the uncertain `risky` and `unknown` statuses:
+`->strict()` additionally rejects the uncertain `risky` and `unknown` statuses (see the warning above):
 
 ```php
 $request->validate([
     'email' => ['required', 'email', (new Deliverable)->strict()],
 ]);
 ```
+
+### Confidence threshold
+
+`->minConfidence(int)` rejects any result scoring below the given threshold (0–100), on top of the always-rejected statuses. It is a graded alternative to `strict()`:
+
+```php
+$request->validate([
+    'email' => ['required', 'email', (new Deliverable)->minConfidence(70)],
+]);
+```
+
+Because throttled probes return low-confidence `unknown` for real addresses, treat this exactly like `strict()` — see the warning above. It can be combined with `strict()`.
 
 ### Custom message
 

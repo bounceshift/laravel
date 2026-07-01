@@ -6,6 +6,7 @@ namespace BounceShift\Laravel\Rules;
 
 use BounceShift\Client;
 use BounceShift\Exceptions\BounceShiftException;
+use BounceShift\ValidationResult;
 use BounceShift\ValidationStatus;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -14,9 +15,16 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * Validates that an email address is deliverable via the BounceShift API.
  *
  * The default policy blocks only statuses that are clearly undeliverable or
- * unsafe and never blocks on uncertainty. Enabling {@see self::strict()} also
- * rejects "risky" and "unknown" results. On any API/network failure the rule
- * fails open (passes) so an outage never blocks user input.
+ * unsafe and never blocks on uncertainty. {@see self::strict()} additionally
+ * rejects "risky" and "unknown"; {@see self::minConfidence()} rejects results
+ * below a confidence threshold. On any API/network failure the rule fails open
+ * (passes) so an outage never blocks user input.
+ *
+ * Caution: strict() and minConfidence() can reject legitimate users. On
+ * infrastructure where SMTP probing is throttled (common for Outlook/Hotmail
+ * and Gmail), real, deliverable addresses frequently return "unknown" with low
+ * confidence — a probe limitation, not a quality signal. Prefer the lenient
+ * default for public signup forms.
  */
 final class Deliverable implements ValidationRule
 {
@@ -49,16 +57,37 @@ final class Deliverable implements ValidationRule
     private bool $strict = false;
 
     /**
+     * Optional minimum confidence (0-100); results below it are rejected.
+     */
+    private ?int $minConfidence = null;
+
+    /**
      * @param  string|null  $message  Optional custom failure message.
      */
     public function __construct(private ?string $message = null) {}
 
     /**
      * Also reject uncertain results ("risky" and "unknown").
+     *
+     * Warning: on throttled SMTP infrastructure this rejects many real users;
+     * prefer the lenient default for public signup forms.
      */
     public function strict(bool $strict = true): self
     {
         $this->strict = $strict;
+
+        return $this;
+    }
+
+    /**
+     * Reject any result whose confidence score is below the threshold (0-100).
+     *
+     * Warning: throttled probes return low-confidence "unknown" for real
+     * addresses, so a high threshold can reject legitimate users. Use deliberately.
+     */
+    public function minConfidence(int $confidence): self
+    {
+        $this->minConfidence = $confidence;
 
         return $this;
     }
@@ -91,21 +120,25 @@ final class Deliverable implements ValidationRule
             return;
         }
 
-        if ($this->isRejected($result->status)) {
+        if ($this->isRejected($result)) {
             $fail($this->message ?? 'The :attribute is not a deliverable email address.');
         }
     }
 
     /**
-     * Whether the given status should fail validation under the current policy.
+     * Whether the given result should fail validation under the current policy.
      */
-    private function isRejected(ValidationStatus $status): bool
+    private function isRejected(ValidationResult $result): bool
     {
-        if (in_array($status, self::ALWAYS_REJECTED, true)) {
+        if (in_array($result->status, self::ALWAYS_REJECTED, true)) {
             return true;
         }
 
-        return $this->strict && in_array($status, self::STRICT_REJECTED, true);
+        if ($this->strict && in_array($result->status, self::STRICT_REJECTED, true)) {
+            return true;
+        }
+
+        return $this->minConfidence !== null && $result->confidence < $this->minConfidence;
     }
 
     /**
