@@ -60,12 +60,22 @@ use BounceShift\Laravel\Facades\BounceShift;
 
 $result = BounceShift::validate('user@example.com');
 
-$result->status->value;   // 'valid', 'invalid', 'catch_all', ...
-$result->confidence;      // 0-100
-$result->isSafeToSend();  // true for 'valid' or 'catch_all'
-$result->fromCache;       // bool
-$result->creditsUsed;     // int
+$result->status->value;         // 'valid', 'invalid', 'catch_all', ...
+$result->confidence;            // 0-100
+$result->isSafeToSend();        // true for status 'valid' or 'catch_all'
+$result->fromCache;             // bool
+$result->creditsUsed;           // int
+
+// Actionable send verdict from the API (distinct from status)
+$result->recommendation?->value; // 'deliverable' | 'send_with_caution' | 'risky' | 'undeliverable' | 'unknown', or null
+$result->recommendationValue;    // raw recommendation string as sent (preserved even if unrecognized), or null
+$result->isSendable();           // true only for 'deliverable' or 'send_with_caution'
+$result->subStatus;              // granular reason string, e.g. 'smtp_verified', or null
+$result->qualityScore;           // 0-100, its own field (may diverge from confidence), or null
+$result->explanation;            // plain-English sentence describing the verdict, or null
 ```
+
+`recommendation` is a `BounceShift\Recommendation` enum; an absent, null, or unrecognized value surfaces as `null` (with the raw string still available on `recommendationValue`) and `isSendable()` returns `false`. `isSafeToSend()` is unchanged and remains status-based.
 
 You can also resolve the client directly from the container:
 
