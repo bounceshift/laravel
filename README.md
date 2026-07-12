@@ -85,6 +85,29 @@ use BounceShift\Client;
 $result = app(Client::class)->validate('user@example.com');
 ```
 
+### Fail open — never block your users
+
+`validate()` throws typed exceptions on failure. On a hot path such as
+validate-on-signup, use `validateSafe()` instead — it **never throws**. If your
+account runs out of credits, or the API is down or timing out, it returns a
+degraded result rather than an exception, so you can let the address through:
+
+```php
+$result = BounceShift::validateSafe('user@example.com');
+
+if ($result->isDegraded()) {
+    // Out of credits / outage / timeout — the address is unverified.
+    // Let it through, and alert your team.
+} elseif (! $result->isSafeToSend()) {
+    // A real verdict came back and it's not safe — reject.
+}
+```
+
+A degraded result has status `unknown`, `creditsUsed = 0`, and
+`isDegraded() === true`, so you can always tell "we couldn't check" apart from a
+genuine `unknown` verdict. The `timeout` / `connect_timeout` config bounds how
+long a stalled API can hold your request before `validateSafe()` gives up.
+
 ### The `Deliverable` validation rule
 
 Use `Deliverable` to block undeliverable addresses in form requests and validators:
@@ -104,7 +127,7 @@ $request->validate([
 | `invalid`, `disposable`, `do_not_mail`, `abuse`, `spamtrap` | ❌ fails  |
 | `valid`, `catch_all`, `unknown`, `risky`            | ✅ passes |
 
-If the API is unreachable (network/API outage), the rule **fails open** and passes, so an outage never blocks your users.
+If the API is unreachable (network/API outage) or your account is out of credits, the rule **fails open** and passes, so it never blocks your users. It logs a `warning` each time it does, so an outage or exhausted balance is never silent.
 
 > [!WARNING]
 > **`strict()` and `minConfidence()` can reject real users.** On infrastructure where the SMTP probe is throttled — common for **Outlook/Hotmail and Gmail** — legitimate, deliverable addresses often come back as `unknown` with low confidence. That is a probe limitation, *not* a quality signal. For public signup forms, prefer the **lenient default**, which never blocks on uncertainty. Only reach for strict mode or a confidence floor when you know your `unknown` rate is low and you would rather lose a few real addresses than accept any risk.

@@ -26,7 +26,7 @@ final class BounceShiftServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(self::CONFIG_PATH, 'bounceshift');
 
         $this->app->singleton(Client::class, static function (Container $app): Client {
-            /** @var array{key: ?string, organization_id: ?string, base_url: string, timeout: int, retries: int} $config */
+            /** @var array{key: ?string, organization_id: ?string, base_url: string, timeout: int, connect_timeout: int, retries: int} $config */
             $config = $app->make('config')->get('bounceshift');
 
             return new Client(
@@ -35,6 +35,7 @@ final class BounceShiftServiceProvider extends ServiceProvider
                 [
                     'base_url' => $config['base_url'] ?? Client::DEFAULT_BASE_URL,
                     'timeout' => (int) ($config['timeout'] ?? 10),
+                    'connect_timeout' => (int) ($config['connect_timeout'] ?? 5),
                     'retries' => (int) ($config['retries'] ?? 2),
                 ],
             );

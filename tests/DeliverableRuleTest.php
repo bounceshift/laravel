@@ -6,6 +6,7 @@ use BounceShift\Client;
 use BounceShift\Laravel\Rules\Deliverable;
 use BounceShift\Laravel\Tests\Support\FakeTransportException;
 use BounceShift\Laravel\Tests\Support\StubClientFactory;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -102,6 +103,21 @@ it('fails open when the client throws', function (): void {
     ));
 
     expect(runRule(new Deliverable))->toBe([]);
+});
+
+it('logs a warning when it fails open, so an outage is never silent', function (): void {
+    Log::spy();
+
+    app()->instance(Client::class, StubClientFactory::throwing(
+        new FakeTransportException('network down'),
+    ));
+
+    expect(runRule(new Deliverable))->toBe([]);
+
+    Log::shouldHaveReceived('warning')
+        ->once()
+        ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'failed open')
+            && $context['attribute'] === 'email');
 });
 
 it('uses a custom failure message', function (): void {
