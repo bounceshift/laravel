@@ -10,6 +10,7 @@ use BounceShift\ValidationResult;
 use BounceShift\ValidationStatus;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Validates that an email address is deliverable via the BounceShift API.
@@ -115,8 +116,15 @@ final class Deliverable implements ValidationRule
 
         try {
             $result = $this->client()->validate($value);
-        } catch (BounceShiftException) {
-            // Fail open: never block user input on an API/network outage.
+        } catch (BounceShiftException $e) {
+            // Fail open: never block user input on an API/network outage — but log
+            // it, so an out-of-credits or an outage doesn't silently disable
+            // validation without anyone noticing.
+            Log::warning('BounceShift validation failed open; the address was allowed through unverified.', [
+                'attribute' => $attribute,
+                'reason' => $e->getMessage(),
+            ]);
+
             return;
         }
 

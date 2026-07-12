@@ -43,5 +43,6 @@ it('publishes the config file under the bounceshift-config tag', function (): vo
 it('merges default config values', function (): void {
     expect(config('bounceshift.base_url'))->toBe(Client::DEFAULT_BASE_URL)
         ->and(config('bounceshift.timeout'))->toBe(10)
+        ->and(config('bounceshift.connect_timeout'))->toBe(5)
         ->and(config('bounceshift.retries'))->toBe(2);
 });

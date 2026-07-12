@@ -46,11 +46,24 @@ return [
     | Request Timeout
     |--------------------------------------------------------------------------
     |
-    | The maximum number of seconds to wait for an API response.
+    | The maximum number of seconds to wait for an API response. This bounds how
+    | long a stalled API can hold a request thread before the SDK gives up.
     |
     */
 
     'timeout' => (int) env('BOUNCESHIFT_TIMEOUT', 10),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Connect Timeout
+    |--------------------------------------------------------------------------
+    |
+    | The maximum number of seconds to wait while establishing the connection,
+    | so an unreachable host fails fast instead of hanging.
+    |
+    */
+
+    'connect_timeout' => (int) env('BOUNCESHIFT_CONNECT_TIMEOUT', 5),
 
     /*
     |--------------------------------------------------------------------------
