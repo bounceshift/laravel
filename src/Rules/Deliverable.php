@@ -58,6 +58,11 @@ final class Deliverable implements ValidationRule
     private bool $strict = false;
 
     /**
+     * Whether a rejection message should offer the API's typo correction.
+     */
+    private bool $suggestCorrections = true;
+
+    /**
      * Optional minimum confidence (0-100); results below it are rejected.
      */
     private ?int $minConfidence = null;
@@ -94,7 +99,24 @@ final class Deliverable implements ValidationRule
     }
 
     /**
+     * Stop offering the API's typo correction in the failure message.
+     *
+     * On by default: when BounceShift rejects grace@gmil.com and knows the
+     * address was probably grace@gmail.com, telling the person is the whole
+     * difference between a dead end and a fixable form error.
+     */
+    public function withoutSuggestions(): self
+    {
+        $this->suggestCorrections = false;
+
+        return $this;
+    }
+
+    /**
      * Override the failure message.
+     *
+     * The message may contain a :suggestion placeholder, replaced with the
+     * corrected address when the API offers one.
      */
     public function message(string $message): self
     {
@@ -129,8 +151,27 @@ final class Deliverable implements ValidationRule
         }
 
         if ($this->isRejected($result)) {
-            $fail($this->message ?? 'The :attribute is not a deliverable email address.');
+            $fail($this->failureMessage($result));
         }
+    }
+
+    /**
+     * The message for a rejected address, offering the typo correction when the
+     * API found one. :attribute is left for the validator to substitute.
+     */
+    private function failureMessage(ValidationResult $result): string
+    {
+        $suggestion = $this->suggestCorrections ? $result->didYouMean : null;
+
+        if ($this->message !== null) {
+            return str_replace(':suggestion', (string) $suggestion, $this->message);
+        }
+
+        if ($suggestion !== null) {
+            return 'The :attribute is not a deliverable email address. Did you mean '.$suggestion.'?';
+        }
+
+        return 'The :attribute is not a deliverable email address.';
     }
 
     /**

@@ -154,6 +154,38 @@ $request->validate([
 
 Because throttled probes return low-confidence `unknown` for real addresses, treat this exactly like `strict()` — see the warning above. It can be combined with `strict()`.
 
+### Typo suggestions
+
+When BounceShift rejects an address whose domain looks like a misspelling, the
+failure message offers the correction:
+
+```
+The email is not a deliverable email address. Did you mean grace@gmail.com?
+```
+
+This is on by default, because a rejection someone can act on is worth far more
+than one they cannot. Turn it off with `->withoutSuggestions()`, or place it
+yourself in a custom message with the `:suggestion` placeholder:
+
+```php
+(new Deliverable)->message('That address looks wrong. Did you mean :suggestion?');
+```
+
+The correction is also available directly on the result, whatever the verdict:
+
+```php
+$result = BounceShift::validate('grace@gmil.com');
+
+$result->didYouMean;      // 'grace@gmail.com'
+$result->hasSuggestion(); // true
+```
+
+It is advisory — the API validates the address you sent, never the suggestion —
+so show it to the person who typed it rather than substituting it. Note it is
+populated on any status, including `valid`, because misspellings like
+`gmil.com` are registered and accept mail: they never bounce, so this is the
+only signal you get.
+
 ### Custom message
 
 ```php

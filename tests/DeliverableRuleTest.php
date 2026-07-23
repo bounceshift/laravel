@@ -127,3 +127,39 @@ it('uses a custom failure message', function (): void {
 
     expect($messages)->toContain('Bad address.');
 });
+
+it('offers the typo correction when it rejects a misspelled address', function (): void {
+    app()->instance(Client::class, StubClientFactory::returningStatus('disposable', [
+        'email' => 'grace@gmil.com',
+        'did_you_mean' => 'grace@gmail.com',
+    ]));
+
+    expect(runRule(new Deliverable, 'grace@gmil.com'))
+        ->toBe(['The email is not a deliverable email address. Did you mean grace@gmail.com?']);
+});
+
+it('leaves the message alone when there is no suggestion', function (): void {
+    app()->instance(Client::class, StubClientFactory::returningStatus('invalid'));
+
+    expect(runRule(new Deliverable))
+        ->toBe(['The email is not a deliverable email address.']);
+});
+
+it('can be told not to offer corrections', function (): void {
+    app()->instance(Client::class, StubClientFactory::returningStatus('disposable', [
+        'did_you_mean' => 'grace@gmail.com',
+    ]));
+
+    expect(runRule((new Deliverable)->withoutSuggestions()))
+        ->toBe(['The email is not a deliverable email address.']);
+});
+
+it('substitutes :suggestion into a custom message', function (): void {
+    app()->instance(Client::class, StubClientFactory::returningStatus('disposable', [
+        'did_you_mean' => 'grace@gmail.com',
+    ]));
+
+    $rule = (new Deliverable)->message('Try :suggestion instead.');
+
+    expect(runRule($rule))->toBe(['Try grace@gmail.com instead.']);
+});
